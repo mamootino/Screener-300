@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="اسکنر کریپتو">
+<meta name="theme-color" content="#0b1220">
+<title>اسکنر کریپتو</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b1220;color:#e6edf7;font-family:-apple-system,Tahoma,sans-serif;padding:env(safe-area-inset-top) 14px calc(env(safe-area-inset-bottom) + 20px)}
+h1{font-size:20px;margin:18px 0 4px}
+.sub{color:#8da0bd;font-size:13px;margin-bottom:14px}
+button{width:100%;padding:15px;border:0;border-radius:14px;background:#16a34a;color:#fff;font-size:17px;font-weight:700}
+button:disabled{opacity:.6}
+#st{color:#8da0bd;font-size:13px;margin:10px 0;min-height:18px}
+.c{background:#131c2e;border-radius:14px;padding:14px;margin:10px 0;border:1px solid #223049}
+.top{display:flex;justify-content:space-between;align-items:center}
+.sym{font-size:18px;font-weight:800}
+.sc{background:#16a34a22;color:#4ade80;padding:3px 10px;border-radius:20px;font-weight:700;font-size:14px}
+.p{direction:ltr;text-align:right;color:#8da0bd;font-size:13px;margin:4px 0 8px}
+ul{margin:6px 0;padding:0 18px;font-size:13px;color:#c5d1e4;line-height:1.7}
+.lv{direction:ltr;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;font-size:12px;text-align:center}
+.lv div{background:#0b1220;border-radius:8px;padding:6px}
+.lv b{display:block;font-size:13px}
+.r{color:#f87171}.g{color:#4ade80}
+.warn{font-size:11.5px;color:#8da0bd;margin-top:16px;line-height:1.7}
+</style>
+</head>
+<body>
+<h1>📈 اسکنر صعودی کریپتو</h1>
+<div class="sub">تحلیل تایم‌فریم ۱ ساعته و ۴ ساعته · داده زنده از بایننس (رایگان)</div>
+<button id="go" onclick="scan()">🔍 اسکن بازار</button>
+<div id="st"></div>
+<div id="out"></div>
+<div class="warn">⚠️ این ابزار فقط بر پایه اندیکاتورهای تکنیکال امتیاز می‌دهد و پیش‌بینی قطعی نیست. توصیه مالی نیست؛ همیشه حد ضرر بگذارید و فقط با پولی که از دست دادنش برایتان قابل تحمل است معامله کنید.</div>
+<script>
+const HOSTS=["https://data-api.binance.vision","https://api.binance.com"];
+const STABLE=new Set(["USDC","FDUSD","TUSD","USDP","DAI","EUR","EURI","AEUR","USDE","XUSD","PAXG","WBTC","BFUSD","USD1"]);
+async function api(p){for(const h of HOSTS){try{const r=await fetch(h+p);if(r.ok)return await r.json()}catch(e){}}throw new Error("api")}
+const $=id=>document.getElementById(id);
+const ema=(a,p)=>{const k=2/(p+1);let e=a[0];const o=[e];for(let i=1;i<a.length;i++){e=a[i]*k+e*(1-k);o.push(e)}return o};
+function rsi(c,p=14){let g=0,l=0;for(let i=1;i<=p;i++){const d=c[i]-c[i-1];d>0?g+=d:l-=d}g/=p;l/=p;for(let i=p+1;i<c.length;i++){const d=c[i]-c[i-1];g=(g*(p-1)+Math.max(d,0))/p;l=(l*(p-1)+Math.max(-d,0))/p}return l===0?100:100-100/(1+g/l)}
+const fp=p=>p>=1?p.toFixed(p>=100?2:4):p.toPrecision(4);
+const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+
+function analyze(k1,k4,chg){
+  k1=k1.slice(0,-1);k4=k4.slice(0,-1); // فقط کندل‌های بسته‌شده
+  const C=k1.map(x=>+x[4]),H=k1.map(x=>+x[2]),L=k1.map(x=>+x[3]),V=k1.map(x=>+x[5]);
+  const n=C.length,price=C[n-1];
+  const e9=ema(C,9),e21=ema(C,21),e50=ema(C,50);
+  const m12=ema(C,12),m26=ema(C,26),macd=m12.map((v,i)=>v-m26[i]),sig=ema(macd,9),hist=macd.map((v,i)=>v-sig[i]);
+  const C4=k4.map(x=>+x[4]),a9=ema(C4,9),a21=ema(C4,21);
+  let s=0;const why=[];
+  if(e9[n-1]>e21[n-1]){s+=15;why.push("EMA9 بالای EMA21 در ۱ ساعته (روند صعودی)")}
+  let cross=false;for(let i=n-6;i<n;i++)if(e9[i]>e21[i]&&e9[i-1]<=e21[i-1])cross=true;
+  if(cross){s+=10;why.push("کراس صعودی EMA در ۶ کندل اخیر")}
+  if(price>e50[n-1]){s+=10}
+  if(a9[a9.length-1]>a21[a21.length-1]){s+=10;why.push("روند ۴ ساعته هم صعودی است")}
+  if(C4[C4.length-1]>a21[a21.length-1])s+=10;
+  const r=rsi(C);
+  if(r>=50&&r<=65){s+=15;why.push("RSI="+r.toFixed(0)+" (قدرت صعودی بدون اشباع خرید)")}
+  else if((r>=45&&r<50)||(r>65&&r<=70))s+=7;
+  else if(r>72){s-=15;why.push("⚠️ RSI بالا ("+r.toFixed(0)+")، احتمال اصلاح")}
+  else if(r<40)s-=10;
+  const h1=hist[n-1],h2=hist[n-2],h3=hist[n-3];
+  if(h1>0&&h1>h2){s+=12;why.push("مومنتوم MACD مثبت و رو به رشد")}
+  else if(h1<0&&h1>h2&&h2>h3){s+=8;why.push("MACD در حال برگشت به سمت صعود")}
+  const vr=avg(V.slice(-3))/avg(V.slice(-23,-3));
+  if(vr>1.5){s+=12;why.push("حجم "+vr.toFixed(1)+" برابر میانگین")}else if(vr>1.15){s+=6;why.push("حجم رو به افزایش")}
+  const bw=[];for(let i=20;i<=n;i++){const w=C.slice(i-20,i),m=avg(w),sd=Math.sqrt(avg(w.map(x=>(x-m)**2)));bw.push(4*sd/m)}
+  const cur=bw[bw.length-1],rank=bw.filter(x=>x<=cur).length/bw.length;
+  if(rank<=.3){s+=10;why.push("فشرده‌شدن نوسان (آماده حرکت انفجاری)")}
+  const hi=Math.max(...H.slice(-24));
+  if(price>=hi*0.98){s+=8;why.push("نزدیک سقف ۲۴ ساعته (آماده شکست)")}
+  if(price>e21[n-1]*1.06){s-=12;why.push("⚠️ قیمت از میانگین فاصله گرفته (دیر شده)")}
+  if(chg>15)s-=10;
+  let tr=[];for(let i=n-14;i<n;i++)tr.push(Math.max(H[i]-L[i],Math.abs(H[i]-C[i-1]),Math.abs(L[i]-C[i-1])));
+  const atr=avg(tr);
+  return{score:Math.max(0,Math.min(100,Math.round(s*100/112))),why,price,stop:price-1.5*atr,t1:price+1.5*atr,t2:price+3*atr,r};
+}
+
+async function scan(){
+  $("go").disabled=true;$("out").innerHTML="";
+  try{
+    $("st").textContent="در حال دریافت لیست ارزها…";
+    const t=await api("/api/v3/ticker/24hr");
+    const list=t.filter(x=>x.symbol.endsWith("USDT")&&!/(UP|DOWN|BULL|BEAR)USDT$/.test(x.symbol)&&!STABLE.has(x.symbol.slice(0,-4))&&+x.quoteVolume>3e6&&+x.priceChangePercent>-4&&+x.priceChangePercent<20)
+      .sort((a,b)=>b.quoteVolume-a.quoteVolume).slice(0,60);
+    const res=[];let done=0;
+    for(let i=0;i<list.length;i+=6){
+      await Promise.all(list.slice(i,i+6).map(async x=>{
+        try{
+          const [a,b]=await Promise.all([api("/api/v3/klines?symbol="+x.symbol+"&interval=1h&limit=120"),api("/api/v3/klines?symbol="+x.symbol+"&interval=4h&limit=60")]);
+          const r=analyze(a,b,+x.priceChangePercent);r.sym=x.symbol.slice(0,-4);r.chg=+x.priceChangePercent;res.push(r);
+        }catch(e){}
+        done++;$("st").textContent="تحلیل "+done+" از "+list.length+"…";
+      }));
+    }
+    res.sort((a,b)=>b.score-a.score);
+    const show=res.filter((x,i)=>i<5||(x.score>=65&&i<8));
+    $("st").textContent="✅ اسکن کامل شد · "+new Date().toLocaleTimeString("fa-IR");
+    $("out").innerHTML=show.map((x,i)=>`<div class="c"><div class="top"><span class="sym">${i+1}. ${x.sym}</span><span class="sc">امتیاز ${x.score}</span></div>
+    <div class="p">${fp(x.price)} USDT · 24h: ${x.chg>0?"+":""}${x.chg.toFixed(1)}%</div>
+    <ul>${x.why.map(w=>"<li>"+w+"</li>").join("")}</ul>
+    <div class="lv"><div class="r">حد ضرر<b>${fp(x.stop)}</b></div><div class="g">هدف ۱<b>${fp(x.t1)}</b></div><div class="g">هدف ۲<b>${fp(x.t2)}</b></div></div></div>`).join("");
+    if(!show.length)$("st").textContent="داده‌ای دریافت نشد.";
+  }catch(e){$("st").innerHTML="❌ اتصال به بایننس برقرار نشد. اینترنت را چک کنید یا VPN روشن کنید و دوباره بزنید."}
+  $("go").disabled=false;
+}
+// آیکون صفحه اصلی
+(function(){const c=document.createElement("canvas");c.width=c.height=180;const x=c.getContext("2d");x.fillStyle="#0b1220";x.fillRect(0,0,180,180);x.fillStyle="#16a34a";[[30,110,40],[70,90,60],[110,60,90],[150,30,120]].forEach(([l,t,h],i)=>{});x.fillRect(28,100,26,52);x.fillRect(66,76,26,76);x.fillRect(104,50,26,102);x.fillStyle="#4ade80";x.fillRect(142,24,16,128);const l=document.createElement("link");l.rel="apple-touch-icon";l.href=c.toDataURL("image/png");document.head.appendChild(l)})();
+</script>
+</body>
+</html>
